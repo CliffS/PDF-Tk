@@ -9,6 +9,8 @@ my $build = Module::Build->new(
                 'IPC::Open2' => 0,
                 'File::Temp' => 0
                },
+    create_makefile_pl => 'passthrough',
+    create_readme      => 1
   );
 $build->create_build_script;
 

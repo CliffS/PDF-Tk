@@ -4,7 +4,8 @@ use IO::All;
 use IPC::Open2;
 use File::Temp qw/tempdir tempfile/;
 use Cwd;
-our $VERSION='0.01';
+use strict;
+our $VERSION='0.02';
 
 sub new {
     my ($proto,%options)=@_;
@@ -25,7 +26,7 @@ sub _get_document {
    my @targets;
    if (ref($self->{file}) eq "ARRAY") {
    	warn "Setting together an arrayref";
-   	foreach $file (@{$self->{file}}) {
+   	foreach my $file (@{$self->{file}}) {
 	  if (ref($file) eq "SCALAR") {
 	  	local $/;
 		my ($fh,$filename)=tempfile();
@@ -48,7 +49,7 @@ sub call_pdftk {
     my ($self,$input,$output,@args)=@_;
     local $/;
     if (ref $input eq "SCALAR" &&  ref $output eq "SCALAR") {
-      my ($rdfh,$wrtfh);
+      my ($rdfh,$wrfh);
       my $pid=open2($rdfh,$wrfh,$self->{pdftk},"-",@args,"output","-") 
          or die "pdftk - @args - failed: $?";
       print $wrfh $$input;
@@ -186,6 +187,10 @@ If you provide an argument, it will return that value (lower cased), or
 else it will return a hash of values;
 Common values are B<creator> ,B<title>, B<producer>,B<author>, B<moddate>,
 B<creationdate>, B<pdfid0>, B<pdfid1>, B<numberofpages>.
+
+=item document
+
+Accessor for the actual document.
 
 =back
 

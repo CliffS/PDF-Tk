@@ -1,8 +1,8 @@
---- #YAML:1.0
+---
 name: PDF-Tk
-version: 0.01
+version: 0.02
 author:
-  - Marcus Ramberg, E<lt>marcus@mediaflex.noE<gt>
+  - 'Marcus Ramberg, E<lt>marcus@mediaflex.noE<gt>'
 abstract: Perl integration for the pdf toolkit (pdftk)
 license: perl
 requires:
@@ -12,5 +12,5 @@ requires:
 provides:
   PDF::Tk:
     file: lib/PDF/Tk.pm
-    version: 0.01
-generated_by: Module::Build version 0.26
+    version: 0.02
+generated_by: Module::Build version 0.2607

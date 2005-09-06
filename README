@@ -36,6 +36,9 @@ METHODS
         ,title, producer,author, moddate, creationdate, pdfid0, pdfid1,
         numberofpages.
 
+    document
+        Accessor for the actual document.
+
 SEE ALSO
     <http://www.accesspdf.com/pdftk/>
 
