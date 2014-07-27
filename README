@@ -14,7 +14,7 @@ METHODS
 
             document - a scalar containing a PDF document,
             file - either a PDF filename or a arrayref of filenames.
-            pdftf - path to the pdftk binary, defaults to "/usr/bin/pdftk"
+            pdftf - path to the pdftk binary, defaults to searching $PATH
 
         note that document and file are mutually exclusive!
 

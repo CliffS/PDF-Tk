@@ -7,7 +7,8 @@ my $build = Module::Build->new(
    requires     => {
                 'IO::All'    => 0,
                 'IPC::Open2' => 0,
-                'File::Temp' => 0
+                'File::Temp' => 0,
+		'File::chdir' => 0,
                },
     create_makefile_pl => 'passthrough',
     create_readme      => 1

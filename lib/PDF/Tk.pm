@@ -1,11 +1,16 @@
 package PDF::Tk;
 
+use strict;
+use warnings;
+
 use IO::All;
 use IPC::Open2;
-use File::Temp qw/tempdir tempfile/;
+use File::Temp qw();
 use Cwd;
-use strict;
-our $VERSION='0.02';
+use File::chdir;
+use File::Which;
+
+our $VERSION='0.03';
 
 sub new {
     my ($proto,%options)=@_;
@@ -13,36 +18,41 @@ sub new {
     my $self=\%options;
     bless $self,$class;
     die "Can't take both a file and document argument"
-     if ($self->{file} && $self->{document});
-    $self->{pdftk} ||= "/usr/bin/pdftk";
+    if ($self->{file} && $self->{document});
+    $self->{pdftk} ||= which('pdftk');
     $self->_get_document if $self->{file};
-    die "Can't find executablable ".$self->{pdftk}
-        unless -x $self->{pdftk};
+    die "Can't find executable ".$self->{pdftk} unless -x $self->{pdftk};
     return $self;
 }
 
 sub _get_document {
-   my $self=shift;
-   my @targets;
-   if (ref($self->{file}) eq "ARRAY") {
-   	warn "Setting together an arrayref";
-   	foreach my $file (@{$self->{file}}) {
-	  if (ref($file) eq "SCALAR") {
-	  	local $/;
-		my ($fh,$filename)=tempfile();
+    my $self=shift;
+    my @targets;
+    if (ref($self->{file}) eq "ARRAY") {
+	foreach my $file (@{$self->{file}}) {
+	    if (ref($file) eq "SCALAR") {
+		local $/;
+		my $fh = new File::Temp(
+		    TEMPLATE => 'pdf-tk',
+		    SUFFIX   => '.pdf',
+		);
+		my $filename = $fh->filename;
 		print $fh $$file; # put data in a file
-		$file=$filename; # set the filename
-		push @targets,$filename;
-	  }
+		push @targets, $filename;
+	    }
+	    else {
+		push @targets, $file;
+	    }
 	}
-      $self->call_pdftk($self->{file},\($self->{document}),"cat"); 
-       die "Could not load ".$self->{file} unless $self->{document}; 
-   } else {
-       $self->{document} = io($self->{file})->binary->all;
-       die "Could not load ".$self->{file} unless $self->{document}; 
-   }
-   delete $self->{file};
-   unlink @targets;
+	my $document;
+	$self->call_pdftk(\@targets, \$document,"cat"); 
+	die "Could not load @{$self->{file}}" unless $document; 
+	$self->{document} = $document;
+    } else {
+	$self->{document} = io($self->{file})->binary->all;
+	die "Could not load ".$self->{file} unless $self->{document}; 
+    }
+    delete $self->{file};
 }
 
 sub call_pdftk {
@@ -66,12 +76,12 @@ sub call_pdftk {
     } elsif (ref $output eq "SCALAR") {
       my $fh;
       open($fh,"-|",$self->{pdftk},(ref $input eq "ARRAY" ? @$input : $input),@args,"output","-")
-       or die "pdftk $input @args - failed: $?";
+       or die "$self->{pdftk} " . (ref $input eq 'ARRAY' ? "@$input" : $input) . "@args - failed: $?";
       $$output=<$fh>;
       close $fh;
     } else {
       system($self->{pdftk},(ref $input eq "ARRAY" ? @$input : $input),@args,"output",$output) == 0 
-       or die "pdftk $input @args $output failed: $?";
+       or die "$self->{pdftk} $input @args $output failed: $?";
     }
 }
 
@@ -83,32 +93,28 @@ sub document {
 
 sub pages {
     my $self=shift;
-    my $tmpdir=tempdir;
+    my $tmpdir=File::Temp->newdir;
     my ($pdftk,@pages);
-    chdir $tmpdir;
+    local $CWD = $tmpdir;
     $self->call_pdftk(\($self->{document}),'%d.pdf','burst');
     my $page=1;
     while (-f "./$page.pdf") {
-        push @pages,io(cwd."/$page.pdf")->binary->all;
-	unlink (cwd."/$page.pdf");
+        push @pages,io("$CWD/$page.pdf")->binary->all;
+	unlink ("$CWD/$page.pdf");
 	$page++;
     }
     unlink ("doc_data.txt");
-    chdir "/";
-    rmdir $tmpdir;
-    return (wantarray ? @pages :\@pages);
+    return (wantarray ? @pages : \@pages);
 }
 
 sub page {
     my ($self,$page)=@_;
-    my $tmpdir=tempdir;
-    chdir $tmpdir;
+    my $tmpdir=File::Temp->newdir;
+    local $CWD = $tmpdir;
     $self->call_pdftk(\($self->{document}),'%d.pdf','burst');
-    my $res=io(cwd."/$page.pdf")->binary->all;
+    my $res=io("$CWD/$page.pdf")->binary->all;
     unlink <*.pdf>;
     unlink ("doc_data.txt");
-    chdir "/";
-    rmdir $tmpdir;
     return $res;
 
 }
@@ -162,7 +168,7 @@ The constructor for the pdftk module. Takes a hash of arguments
 
     document - a scalar containing a PDF document,
     file - either a PDF filename or a arrayref of filenames.
-    pdftf - path to the pdftk binary, defaults to "/usr/bin/pdftk"
+    pdftf - path to the pdftk binary, defaults to searching $PATH
 
 note that document and file are mutually exclusive!
 
